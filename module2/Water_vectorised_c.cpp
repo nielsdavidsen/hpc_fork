@@ -107,6 +107,44 @@ public:
     std::vector<size_t> neighbours;   // indices of the neighbours
 };
 
+// ===============================================================================
+// Two new classes arranging Atoms in a Structure-of-Array data structure
+// ===============================================================================
+
+/* atoms class, representing N instances of identical atoms */
+class Atoms {
+public:
+    double mass;      // The mass of the atom in (U)
+    double ep;        // epsilon for LJ potential
+    double sigma;     // Sigma, somehow the size of the atom
+    double charge;    // charge of the atom (partial charge)
+    std::string name; // Name of the atom
+    // the position in (nm), velocity (nm/ps) and forces (k_BT/nm) of the atom
+    std::vector<Vec3> p,v,f;
+    // constructor, takes parameters and allocates p, v and f properly
+    Atoms(double mass, double ep, double sigma, double charge, std::string name, size_t N_identical) 
+    : mass{mass}, ep{ep}, sigma{sigma}, charge{charge}, name{name}, 
+      p{N_identical, {0,0,0}}, v{N_identical, {0,0,0}}, f{N_identical, {0,0,0}}
+    {}
+};
+
+/* molecule class */
+class Molecules {
+public:
+    std::vector<Atoms> atoms;                     // list of atoms in the molecule
+    std::vector<Bond> bonds;                      // the bond potentials, eg for water the left and right bonds
+    std::vector<Angle> angles;                    // the angle potentials, for water just the single one, but keep it a list for generality
+    std::vector<std::vector<size_t>> neighbours;  // indices of the neighbours
+    size_t no_mol;
+
+    // constructor, takes parameters and allocates neigbour list vector properly
+    Molecules(std::vector<Atoms> atoms, std::vector<Bond> bonds, std::vector<Angle> angles, size_t no_mol)
+    : atoms{atoms}, bonds{bonds}, angles{angles}, neighbours{no_mol}, no_mol{no_mol}
+    {}
+};
+
+// ===============================================================================
+
 /* system class */
 class System {
 public:
@@ -170,6 +208,11 @@ void BuildNeighborList(System& sys){
         size_t target_num = std::min(nClosest, sys.molecules.size()-1);
 
         // Lambda function to compare distances with indices as the keys to sort
+        //
+        // In Python the following statement would be: lambda_compare = lambda a,b: distance2[a] < distances2[b]
+        // Remember, in Python you cannot decide on pass by value ([=] in C++) or by reference ([&] in C++)
+        // Syntax-wise the "[&]" (or "[]" or "[=]") in C++ corresponds to "lambda" in Python.
+        //
         auto lambda_compare = [&](size_t &a, size_t &b) { return distances2[a] < distances2[b]; };
 
         // partial sort puts the lowest target_num elements at the start of the list and ignore the rest
